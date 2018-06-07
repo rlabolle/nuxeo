@@ -24,7 +24,6 @@ node('SLAVE') {
     tool name: 'java-8-openjdk', type: 'hudson.model.JDK'
     tool name: 'maven-3', type: 'hudson.tasks.Maven$MavenInstallation'
 
-    
     timeout(time: 3, unit: 'HOURS') {
         timestamps {
             def sha
@@ -50,28 +49,25 @@ node('SLAVE') {
 
             try {
                 stage('tests') {
-                    withBuildStatus("$DBPROFILE-$DBVERSION/utest", 'https://github.com/nuxeo/nuxeo', sha, "${BUILD_URL}") {
-		        withEnv(["nuxeo.db.port=5432", "nuxeo.db.name=nuxeoAurora", "nuxeo.db.host=nuxeoaurora.cj28ak80bmjm.eu-west-1.rds.amazonaws.com", "nuxeo.db.user=awsnuxeo"]){
-				withCredentials([usernamePassword(credentialsId: 'nuxeo.db.password', passwordVariable: 'nuxeo.db.password', usernameVariable: 'nuxeo.db.pass')]) {
-
-			try {
-                        sh """#!/bin/bash -ex
-                                mvn -B -f $WORKSPACE/pom.xml install -Pqa,addons,customdb,$DBPROFILE -Dmaven.test.failure.ignore=true -Dnuxeo.tests.random.mode=STRICT
-              
-                        """ 
-			} finally {
-				archive '**/target/failsafe-reports/*, **/target/*.png, **/target/**/*.log, **/target/**/log/*'
-                        	junit '**/target/surefire-reports/*.xml, **/target/failsafe-reports/*.xml, **/target/failsafe-reports/**/*.xml'
-				}
-			    } 
-
-			}
-		   }
-	       }
-	     } finally {
-                	warningsPublisher()
-                	claimPublisher()
-                    	}
-                   }
-           }
+                    withBuildStatus("aurora-$DBPROFILE-$DBVERSION/utest", 'https://github.com/nuxeo/nuxeo', sha, "${BUILD_URL}") {
+                        withEnv(["NX_DB_PORT=5432", "NX_DB_ADMINNAME=nuxeoAurora"]){
+                            withCredentials([usernamePassword(credentialsId: 'AURORA_PGSQL', usernameVariable: 'NX_DB_ADMINUSER', passwordVariable: 'NX_DB_ADMINPASS')]) {
+                                try {
+                                    sh """#!/bin/bash -ex
+                                        mvn -B -f $WORKSPACE/pom.xml install -Pqa,addons,customdb,$DBPROFILE -Dmaven.test.failure.ignore=true -Dnuxeo.tests.random.mode=STRICT
+                                    """
+                                } finally {
+                                    archive '**/target/failsafe-reports/*, **/target/*.png, **/target/**/*.log, **/target/**/log/*'
+                                    junit '**/target/surefire-reports/*.xml, **/target/failsafe-reports/*.xml, **/target/failsafe-reports/**/*.xml'
+                                }
+                            }
+                        }
+                    }
+                }
+            } finally {
+                warningsPublisher()
+                claimPublisher()
+            }
+        }
+    }
 }
