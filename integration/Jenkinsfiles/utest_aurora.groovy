@@ -56,7 +56,7 @@ node('SLAVE') {
 
 			try {
                         sh """#!/bin/bash -ex
-                                mvn -B -f $WORKSPACE/pom.xml install -Pqa,addons,customdb,$DBPROFILE -Dmaven.test.failure.ignore=true -Dnuxeo.tests.random.mode=STRICT"
+                                mvn -B -f $WORKSPACE/pom.xml install -Pqa,addons,customdb,$DBPROFILE -Dmaven.test.failure.ignore=true -Dnuxeo.tests.random.mode=STRICT
               
                         """ 
 			} finally {
