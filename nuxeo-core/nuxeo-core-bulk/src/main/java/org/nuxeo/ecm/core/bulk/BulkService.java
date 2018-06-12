@@ -18,16 +18,26 @@
  */
 package org.nuxeo.ecm.core.bulk;
 
-import java.util.UUID;
-
 /**
- * API to manage Bulk Operation Framework.
+ * API to manage Bulk Action Framework.
  *
  * @since 10.2
  */
 public interface BulkService {
 
-    BulkStatus runOperation(BulkCommand command);
+    /**
+     * Submits the input {@link BulkCommand} to the Bulk Action Framework system and get the initial status containing
+     * the bulk action id.
+     *
+     * @param command the command to run
+     * @return the initial bulk status
+     */
+    BulkStatus runAction(BulkCommand command);
 
-    BulkStatus getStatus(UUID bulkOperationId);
+    /**
+     * Returns the bulk action status of given bulk action id.
+     *
+     * @return the bulk action status of given bulk action id
+     */
+    BulkStatus getStatus(String bulkActionId);
 }
