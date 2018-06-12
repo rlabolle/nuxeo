@@ -60,13 +60,16 @@ public class TestBulkService {
     public CoreSession session;
 
     @Test
-    public void testRunBulkOperation() throws Exception {
+    public void testRunBulkAction() throws Exception {
 
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
         String nxql = String.format("SELECT * from Document where ecm:parentId='%s'", model.getId());
 
         // TODO change operation name
-        BulkStatus status = service.runOperation(new BulkCommand().withQuery(nxql).withOperation("count"));
+        BulkStatus status = service.runAction(new BulkCommand().withUsername(session.getPrincipal().getName())
+                                                               .withRepository(session.getRepositoryName())
+                                                               .withQuery(nxql)
+                                                               .withAction("count"));
         assertNotNull(status);
         assertEquals(SCHEDULED, status.getState());
 
@@ -74,14 +77,14 @@ public class TestBulkService {
         try (LogTailer<Record> tailer = manager.createTailer("counter", "output")) {
             for (int i = 1; i <= 10; i++) {
                 LogRecord<Record> logRecord = tailer.read(Duration.ofSeconds(1));
-                assertEquals(i, new BigInteger(logRecord.message().data).intValue());
+                assertEquals(i, new BigInteger(logRecord.message().getData()).intValue());
             }
         }
 
-        status = service.getStatus(status.getUUID());
+        status = service.getStatus(status.getId());
         assertNotNull(status);
         assertEquals(COMPLETED, status.getState());
-        assertNotNull(status.getScrolledDocumentCount());
-        assertEquals(10, status.getScrolledDocumentCount().longValue());
+        assertNotNull(status.getCount());
+        assertEquals(10, status.getCount().longValue());
     }
 }
