@@ -19,6 +19,8 @@
 package org.nuxeo.ecm.core.bulk;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.nuxeo.ecm.core.bulk.BulkComponent.BULK_KV_STORE_NAME;
+import static org.nuxeo.ecm.core.bulk.BulkComponent.BULK_LOG_MANAGER_NAME;
 import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
 
 import java.io.IOException;
@@ -61,12 +63,6 @@ public class BulkServiceImpl implements BulkService {
 
     protected static final String SCROLLED_DOCUMENT_COUNT = ":count";
 
-    protected final BulkServiceDescriptor descriptor;
-
-    public BulkServiceImpl(BulkServiceDescriptor descriptor) {
-        this.descriptor = descriptor;
-    }
-
     @Override
     public BulkStatus runAction(BulkCommand command) {
         if (log.isDebugEnabled()) {
@@ -95,7 +91,7 @@ public class BulkServiceImpl implements BulkService {
             keyValueStore.put(bulkActionId + COMMAND, commandAsBytes);
 
             // send it to nuxeo-stream
-            LogManager logManager = Framework.getService(StreamService.class).getLogManager(descriptor.logConfig);
+            LogManager logManager = Framework.getService(StreamService.class).getLogManager(BULK_LOG_MANAGER_NAME);
             LogAppender<Record> logAppender = logManager.getAppender(SET_STREAM_NAME);
             logAppender.append(bulkActionId, new Record(bulkActionId, commandAsBytes));
         } catch (JsonProcessingException e) {
@@ -132,7 +128,7 @@ public class BulkServiceImpl implements BulkService {
     }
 
     public KeyValueStore getKvStore() {
-        return Framework.getService(KeyValueService.class).getKeyValueStore(descriptor.kvStore);
+        return Framework.getService(KeyValueService.class).getKeyValueStore(BULK_KV_STORE_NAME);
     }
 
 }
