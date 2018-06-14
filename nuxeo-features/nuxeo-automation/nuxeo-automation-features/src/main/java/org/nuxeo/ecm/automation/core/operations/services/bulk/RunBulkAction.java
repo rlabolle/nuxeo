@@ -45,15 +45,15 @@ public class RunBulkAction {
     @Param(name = "query", required = true)
     protected String query;
 
-    @Param(name = "operation", required = true)
-    protected String operation;
+    @Param(name = "action", required = true)
+    protected String action;
 
     @OperationMethod
     public BulkStatus run() {
         String repositoryName = session.getRepositoryName();
         String userName = session.getPrincipal().getName();
         BulkCommand command = new BulkCommand().withRepository(repositoryName)
-                                               .withAction(operation)
+                                               .withAction(action)
                                                .withUsername(userName)
                                                .withQuery(query);
         return service.runAction(command);
