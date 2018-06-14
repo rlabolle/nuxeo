@@ -71,7 +71,7 @@ public class TestRunBulkAction {
 
         OperationContext ctx = new OperationContext(session);
         Map<String, String> params = new HashMap<>();
-        params.put("operation", "count");
+        params.put("action", "count");
         params.put("query", nxql);
 
         BulkStatus result = (BulkStatus) service.run(ctx, RunBulkAction.ID, params);
