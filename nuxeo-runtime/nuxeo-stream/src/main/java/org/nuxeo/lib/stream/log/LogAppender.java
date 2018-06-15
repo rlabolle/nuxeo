@@ -42,15 +42,14 @@ public interface LogAppender<M extends Externalizable> {
     int size();
 
     /**
-     * Append a message into a partition, returns {@link LogOffset} position of the message. This method is thread safe,
-     * a queue can be shared by multiple producers.
+     * Append a message into a partition, returns {@link LogOffset} position of the message. This method is thread safe.
      *
      * @param partition index lower than {@link #size()}
      */
     LogOffset append(int partition, M message);
 
     /**
-     * Same as {@link #append(int, Externalizable)}, the queue is chosen using a hash of {@param key}.
+     * Same as {@link #append(int, Externalizable)}, the partition is chosen using a hash of {@param key}.
      */
     default LogOffset append(String key, M message) {
         Objects.requireNonNull(key);

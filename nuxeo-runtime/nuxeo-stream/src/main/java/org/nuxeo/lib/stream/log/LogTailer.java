@@ -44,7 +44,7 @@ public interface LogTailer<M extends Externalizable> extends AutoCloseable {
     /**
      * Read a message from assigned partitions within the timeout.
      *
-     * @return null if there is no message in the queue after the timeout.
+     * @return null if there is no message available after the timeout.
      * @throws RebalanceException if a partition rebalancing happen during the read, this is possible only when using
      *             {@link LogManager#subscribe}.
      */
