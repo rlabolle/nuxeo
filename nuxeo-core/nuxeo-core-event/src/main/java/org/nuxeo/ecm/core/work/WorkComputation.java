@@ -55,6 +55,8 @@ public class WorkComputation extends AbstractComputation {
 
     protected final Timer workTimer;
 
+    protected Work work;
+
     public WorkComputation(String name) {
         super(name, 1, 0);
         MetricRegistry registry = SharedMetricRegistries.getOrCreate(MetricsService.class.getName());
@@ -62,8 +64,15 @@ public class WorkComputation extends AbstractComputation {
     }
 
     @Override
+    public void signalStop() {
+        if (work != null) {
+            work.setWorkInstanceSuspending();
+        }
+    }
+
+    @Override
     public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-        Work work = deserialize(record.getData());
+        work = deserialize(record.getData());
         try {
             if (work.isIdempotent() && workIds.contains(work.getId())) {
                 log.warn("Duplicate work id: " + work.getId() + " skipping");
@@ -72,7 +81,9 @@ public class WorkComputation extends AbstractComputation {
                 workIds.add(work.getId());
             }
             work.cleanUp(true, null);
-            context.askForCheckpoint();
+            if (! work.isWorkInstanceSuspended()) {
+                context.askForCheckpoint();
+            }
         } catch (Exception e) {
             if (ExceptionUtils.hasInterruptedCause(e)) {
                 Thread.currentThread().interrupt();
@@ -92,6 +103,7 @@ public class WorkComputation extends AbstractComputation {
             work.cleanUp(false, e);
         } finally {
             workTimer.update(work.getCompletionTime() - work.getStartTime(), TimeUnit.MILLISECONDS);
+            work = null;
         }
     }
 
