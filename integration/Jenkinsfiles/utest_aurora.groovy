@@ -24,7 +24,7 @@ node('SLAVE') {
     tool name: 'java-8-openjdk', type: 'hudson.model.JDK'
     tool name: 'maven-3', type: 'hudson.tasks.Maven$MavenInstallation'
 
-    timeout(time: 3, unit: 'HOURS') {
+    timeout(time: 6, unit: 'HOURS') {
         timestamps {
             def sha
             stage('clone') {
