@@ -116,7 +116,7 @@ public class StreamBulkScroller implements StreamProcessorTopology {
             KeyValueStore kvStore = Framework.getService(KeyValueService.class).getKeyValueStore(BULK_KV_STORE_NAME);
             try {
                 String bulkActionId = record.getKey();
-                BulkCommand command = getBulkCommandJson(record.getData());
+                BulkCommand command = BulkCommandHelper.getBulkCommandJson(record.getData());
                 if (!kvStore.compareAndSet(bulkActionId + STATE, SCHEDULED.toString(), BUILDING.toString())) {
                     log.error("Discard record: " + record + " because it's already building");
                     return;
@@ -148,17 +148,6 @@ public class StreamBulkScroller implements StreamProcessorTopology {
                 log.error("Discard invalid record: " + record, e);
             }
         }
-
-        protected BulkCommand getBulkCommandJson(byte[] data) {
-            String json = new String(data, UTF_8);
-            try {
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readValue(json, BulkCommand.class);
-            } catch (IOException e) {
-                throw new NuxeoException("Invalid json bulkCommand=" + json, e);
-            }
-        }
-
     }
 
     // TODO copied from StreamAuditWriter - where can we put that ?
