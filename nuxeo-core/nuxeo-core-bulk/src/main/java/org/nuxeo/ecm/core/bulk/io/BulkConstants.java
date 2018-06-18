@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  * Contributors:
- *     Funsho David
+ *     Kevin Leturc <kleturc@nuxeo.com>
  */
 package org.nuxeo.ecm.core.bulk.io;
 
