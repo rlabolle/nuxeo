@@ -24,8 +24,11 @@ import static org.nuxeo.ecm.core.bulk.BulkComponent.BULK_LOG_MANAGER_NAME;
 import static org.nuxeo.ecm.core.bulk.BulkStatus.State.COMPLETED;
 import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
 
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -87,5 +90,38 @@ public class TestBulkService {
         assertEquals(COMPLETED, status.getState());
         assertNotNull(status.getCount());
         assertEquals(10, status.getCount().longValue());
+    }
+
+    @Test
+    public void testSetPropertyBulkOperation() throws Exception {
+
+        DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
+        String nxql = String.format("SELECT * from Document where ecm:parentId='%s'", model.getId());
+
+        Map<String, Serializable> params = new HashMap<>();
+        params.put("xpath", "dc:title");
+        params.put("value", "test title");
+        BulkStatus status = service.runAction(
+                new BulkCommand().withRepository(session.getRepositoryName())
+                                 .withUsername(session.getPrincipal().getName())
+                                 .withQuery(nxql)
+                                 .withAction("setProperty")
+                                 .withParams(params));
+
+        LogManager manager = Framework.getService(StreamService.class).getLogManager("bulk");
+        try (LogTailer<Record> tailer = manager.createTailer("setProperty", "setProperty")) {
+            for (int i = 0; i <= 10; i++) {
+                tailer.read(Duration.ofSeconds(1));
+            }
+        }
+
+        status = service.getStatus(status.getId());
+        assertNotNull(status);
+        assertEquals(COMPLETED, status.getState());
+
+        for (DocumentModel child : session.getChildren(model.getRef())) {
+            assertEquals("test title", child.getTitle());
+        }
+
     }
 }
