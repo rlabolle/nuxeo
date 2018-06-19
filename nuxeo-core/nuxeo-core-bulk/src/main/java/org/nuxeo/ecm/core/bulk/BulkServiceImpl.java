@@ -31,7 +31,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.bulk.BulkStatus.State;
-import org.nuxeo.ecm.core.bulk.io.BulkCommandJsonReader;
+import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
 import org.nuxeo.lib.stream.computation.Record;
 import org.nuxeo.lib.stream.log.LogAppender;
 import org.nuxeo.lib.stream.log.LogManager;
@@ -40,7 +41,6 @@ import org.nuxeo.runtime.kv.KeyValueService;
 import org.nuxeo.runtime.kv.KeyValueStore;
 import org.nuxeo.runtime.stream.StreamService;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -83,7 +83,8 @@ public class BulkServiceImpl implements BulkService {
         status.setCommand(command);
 
         try {
-            byte[] commandAsBytes = OBJECT_MAPPER.writeValueAsBytes(command);
+            byte[] commandAsBytes = MarshallerHelper.objectToJson(command, RenderingContext.CtxBuilder.get())
+                                                    .getBytes();
 
             // store the bulk command and status in the key/value store
             KeyValueStore keyValueStore = getKvStore();
@@ -95,7 +96,7 @@ public class BulkServiceImpl implements BulkService {
             LogManager logManager = Framework.getService(StreamService.class).getLogManager(BULK_LOG_MANAGER_NAME);
             LogAppender<Record> logAppender = logManager.getAppender(SET_STREAM_NAME);
             logAppender.append(bulkActionId, new Record(bulkActionId, commandAsBytes));
-        } catch (JsonProcessingException e) {
+        } catch (IOException e) {
             throw new NuxeoException("Unable to serialize the bulk command=" + command, e);
         }
         return status;
@@ -116,7 +117,8 @@ public class BulkServiceImpl implements BulkService {
 
         String commandAsString = keyValueStore.getString(bulkActionId + COMMAND);
         try {
-            BulkCommand command = new BulkCommandJsonReader().readBulkCommandAsString(commandAsString);
+            BulkCommand command = MarshallerHelper.jsonToObject(BulkCommand.class, commandAsString,
+                    RenderingContext.CtxBuilder.get());
             status.setCommand(command);
         } catch (IOException e) {
             throw new NuxeoException("Unable to deserialize the bulk command=" + commandAsString, e);
