@@ -72,8 +72,7 @@ public class SetPropertiesAction implements StreamProcessorTopology {
         @SuppressWarnings("unchecked")
         public void processRecord(ComputationContext context, String inputStreamName, Record record) {
             BulkCommand command = BulkCommandHelper.getBulkCommandJson(record.getData());
-            Map<String, Serializable> properties = (Map<String, Serializable>) command.getParams().get(
-                    PROPERTIES_PARAMS);
+            Map<String, Serializable> properties = command.getParam(PROPERTIES_PARAMS);
             String docId = record.getKey().split("/")[1];
 
             TransactionHelper.runInTransaction(() -> {
