@@ -21,6 +21,7 @@ package org.nuxeo.ecm.core.bulk.actions;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -41,13 +42,15 @@ import org.nuxeo.runtime.transaction.TransactionHelper;
 /**
  * @since 10.2
  */
-public class SetPropertyAction implements StreamProcessorTopology {
+public class SetPropertiesAction implements StreamProcessorTopology {
 
-    private static final Log log = LogFactory.getLog(SetPropertyAction.class);
+    private static final Log log = LogFactory.getLog(SetPropertiesAction.class);
 
-    public static final String COMPUTATION_NAME = "SetProperty";
+    public static final String COMPUTATION_NAME = "SetProperties";
 
-    public static final String STREAM_NAME = "setProperty";
+    public static final String STREAM_NAME = "setProperties";
+
+    public static final String PROPERTIES_PARAMS = "properties";
 
     @Override
     public Topology getTopology(Map<String, String> options) {
@@ -66,17 +69,18 @@ public class SetPropertyAction implements StreamProcessorTopology {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void processRecord(ComputationContext context, String inputStreamName, Record record) {
             BulkCommand command = BulkCommandHelper.getBulkCommandJson(record.getData());
-            String xpath = (String) command.getParams().get("xpath");
-            Serializable value = command.getParams().get("value");
+            Map<String, Serializable> properties = (Map<String, Serializable>) command.getParams().get(
+                    PROPERTIES_PARAMS);
             String docId = record.getKey().split("/")[1];
 
             TransactionHelper.runInTransaction(() -> {
                 try (CloseableCoreSession session = CoreInstance.openCoreSession(command.getRepository(),
                         command.getUsername())) {
                     DocumentModel doc = session.getDocument(new IdRef(docId));
-                    doc.setPropertyValue(xpath, value);
+                    properties.forEach(doc::setPropertyValue);
                     session.saveDocument(doc);
                 }
             });
