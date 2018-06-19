@@ -19,6 +19,7 @@
 package org.nuxeo.ecm.core.bulk;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -94,7 +95,7 @@ public class BulkCommand implements Serializable {
     }
 
     public Map<String, Serializable> getParams() {
-        return params;
+        return Collections.unmodifiableMap(params);
     }
 
     @Override

@@ -52,8 +52,6 @@ public class BulkServiceImpl implements BulkService {
 
     private static final Log log = LogFactory.getLog(BulkServiceImpl.class);
 
-    protected static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     protected static final String SET_STREAM_NAME = "documentSet";
 
     protected static final String COMMAND = ":command";

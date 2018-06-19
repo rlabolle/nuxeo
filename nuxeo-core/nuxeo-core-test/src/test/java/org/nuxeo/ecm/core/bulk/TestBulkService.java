@@ -27,6 +27,8 @@ import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,18 +100,21 @@ public class TestBulkService {
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
         String nxql = String.format("SELECT * from Document where ecm:parentId='%s'", model.getId());
 
-        Map<String, Serializable> params = new HashMap<>();
-        params.put("xpath", "dc:title");
-        params.put("value", "test title");
-        BulkStatus status = service.runAction(
-                new BulkCommand().withRepository(session.getRepositoryName())
-                                 .withUsername(session.getPrincipal().getName())
-                                 .withQuery(nxql)
-                                 .withAction("setProperty")
-                                 .withParams(params));
+        String title = "test title";
+        String description = "test description";
+        Map<String, Serializable> properties = new HashMap<>();
+        properties.put("dc:title", title);
+        properties.put("dc:description", description);
+
+        BulkStatus status = service.runAction(new BulkCommand().withRepository(session.getRepositoryName())
+                                                               .withUsername(session.getPrincipal().getName())
+                                                               .withQuery(nxql)
+                                                               .withAction("setProperties")
+                                                               .withParams(Collections.singletonMap("properties",
+                                                                       (Serializable) properties)));
 
         LogManager manager = Framework.getService(StreamService.class).getLogManager("bulk");
-        try (LogTailer<Record> tailer = manager.createTailer("setProperty", "setProperty")) {
+        try (LogTailer<Record> tailer = manager.createTailer("setProperties", "setProperties")) {
             for (int i = 0; i <= 10; i++) {
                 tailer.read(Duration.ofSeconds(1));
             }
@@ -120,7 +125,8 @@ public class TestBulkService {
         assertEquals(COMPLETED, status.getState());
 
         for (DocumentModel child : session.getChildren(model.getRef())) {
-            assertEquals("test title", child.getTitle());
+            assertEquals(title, child.getTitle());
+            assertEquals(description, child.getPropertyValue("dc:description"));
         }
 
     }
