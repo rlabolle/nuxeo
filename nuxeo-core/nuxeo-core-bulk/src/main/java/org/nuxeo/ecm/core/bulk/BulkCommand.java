@@ -98,6 +98,16 @@ public class BulkCommand implements Serializable {
         return Collections.unmodifiableMap(params);
     }
 
+    public <T> BulkCommand withParam(String key, T value) {
+        params.put(key, (Serializable) value);
+        return this;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getParam(String key) {
+        return (T) params.get(key);
+    }
+
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this);

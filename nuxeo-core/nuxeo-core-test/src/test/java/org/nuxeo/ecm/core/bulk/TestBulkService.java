@@ -110,8 +110,7 @@ public class TestBulkService {
                                                                .withUsername(session.getPrincipal().getName())
                                                                .withQuery(nxql)
                                                                .withAction("setProperties")
-                                                               .withParams(Collections.singletonMap("properties",
-                                                                       (Serializable) properties)));
+                                                               .withParam("properties", properties));
 
         LogManager manager = Framework.getService(StreamService.class).getLogManager("bulk");
         try (LogTailer<Record> tailer = manager.createTailer("setProperties", "setProperties")) {
