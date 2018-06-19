@@ -23,8 +23,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 
 import org.nuxeo.ecm.core.api.NuxeoException;
-import org.nuxeo.ecm.core.bulk.io.BulkCommandJsonReader;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.nuxeo.ecm.core.io.registry.MarshallerHelper;
+import org.nuxeo.ecm.core.io.registry.context.RenderingContext;
 
 /**
  * Helper class for bulk commands.
@@ -40,8 +40,7 @@ public class BulkCommandHelper {
     public static BulkCommand getBulkCommandJson(byte[] data) {
         String json = new String(data, UTF_8);
         try {
-            BulkCommandJsonReader reader = new BulkCommandJsonReader();
-            return reader.readBulkCommandAsString(json);
+            return MarshallerHelper.jsonToObject(BulkCommand.class, json, RenderingContext.CtxBuilder.get());
         } catch (IOException e) {
             throw new NuxeoException("Invalid json bulkCommand=" + json, e);
         }
