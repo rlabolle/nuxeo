@@ -22,22 +22,18 @@ import static org.nuxeo.ecm.platform.audit.listener.StreamAuditEventListener.STR
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.platform.audit.api.AuditLogger;
 import org.nuxeo.ecm.platform.audit.api.LogEntry;
-import org.nuxeo.lib.stream.computation.AbstractComputation;
 import org.nuxeo.lib.stream.computation.ComputationContext;
 import org.nuxeo.lib.stream.computation.Record;
-import org.nuxeo.lib.stream.computation.Topology;
 import org.nuxeo.runtime.api.Framework;
-import org.nuxeo.runtime.stream.StreamProcessorTopology;
+import org.nuxeo.runtime.stream.BatchedProcessorTopology;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,106 +42,40 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * @since 9.3
  */
-public class StreamAuditWriter implements StreamProcessorTopology {
+public class StreamAuditWriter extends BatchedProcessorTopology<LogEntry> {
     private static final Log log = LogFactory.getLog(StreamAuditWriter.class);
 
     public static final String COMPUTATION_NAME = "AuditLogWriter";
 
-    public static final String BATCH_SIZE_OPT = "batchSize";
-
-    public static final String BATCH_THRESHOLD_MS_OPT = "batchThresholdMs";
-
-    public static final int DEFAULT_BATCH_SIZE = 10;
-
-    public static final int DEFAULT_BATCH_THRESHOLD_MS = 200;
+    public StreamAuditWriter() {
+        super(COMPUTATION_NAME, STREAM_NAME);
+    }
 
     @Override
-    public Topology getTopology(Map<String, String> options) {
-        int batchSize = getOptionAsInteger(options, BATCH_SIZE_OPT, DEFAULT_BATCH_SIZE);
-        int batchThresholdMs = getOptionAsInteger(options, BATCH_THRESHOLD_MS_OPT, DEFAULT_BATCH_THRESHOLD_MS);
-        return Topology.builder()
-                       .addComputation(
-                               () -> new AuditLogWriterComputation(COMPUTATION_NAME, batchSize, batchThresholdMs),
-                               Collections.singletonList("i1:" + STREAM_NAME))
-                       .build();
-    }
-
-    public static class AuditLogWriterComputation extends AbstractComputation {
-        protected final int batchSize;
-
-        protected final int batchThresholdMs;
-
-        protected final List<LogEntry> logEntries;
-
-        public AuditLogWriterComputation(String name, int batchSize, int batchThresholdMs) {
-            super(name, 1, 0);
-            this.batchSize = batchSize;
-            this.batchThresholdMs = batchThresholdMs;
-            logEntries = new ArrayList<>(batchSize);
-        }
-
-        @Override
-        public void init(ComputationContext context) {
-            log.debug(String.format("Starting computation: %s reading on: %s, batch size: %d, threshold: %dms",
-                    COMPUTATION_NAME, STREAM_NAME, batchSize, batchThresholdMs));
-            context.setTimer("batch", System.currentTimeMillis() + batchThresholdMs);
-        }
-
-        @Override
-        public void processTimer(ComputationContext context, String key, long timestamp) {
-            writeEntriesToAudit(context);
-            context.setTimer("batch", System.currentTimeMillis() + batchThresholdMs);
-        }
-
-        @Override
-        public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-            try {
-                logEntries.add(getLogEntryFromJson(record.getData()));
-            } catch (NuxeoException e) {
-                log.error("Discard invalid record: " + record, e);
-                return;
-            }
-            if (logEntries.size() >= batchSize) {
-                writeEntriesToAudit(context);
-            }
-        }
-
-        @Override
-        public void destroy() {
-            log.debug(
-                    String.format("Destroy computation: %s, pending entries: %d", COMPUTATION_NAME, logEntries.size()));
-        }
-
-        protected void writeEntriesToAudit(ComputationContext context) {
-            if (logEntries.isEmpty()) {
-                return;
-            }
-            if (log.isDebugEnabled()) {
-                log.debug(String.format("Writing %d log entries to audit backend.", logEntries.size()));
-            }
-            AuditLogger logger = Framework.getService(AuditLogger.class);
-            logger.addLogEntries(logEntries);
-            logEntries.clear();
-            context.askForCheckpoint();
-        }
-
-        protected LogEntry getLogEntryFromJson(byte[] data) {
-            String json = "";
-            try {
-                json = new String(data, "UTF-8");
-                ObjectMapper mapper = new ObjectMapper();
-                return mapper.readValue(json, LogEntryImpl.class);
-            } catch (UnsupportedEncodingException e) {
-                throw new NuxeoException("Discard log entry, invalid byte array", e);
-            } catch (IOException e) {
-                throw new NuxeoException("Invalid json logEntry" + json, e);
-            }
+    protected List<LogEntry> getEntriesFromRecord(Record record) {
+        String json = "";
+        try {
+            json = new String(record.getData(), "UTF-8");
+            ObjectMapper mapper = new ObjectMapper();
+            return Collections.singletonList(mapper.readValue(json, LogEntryImpl.class));
+        } catch (UnsupportedEncodingException e) {
+            throw new NuxeoException("Discard log entry, invalid byte array", e);
+        } catch (IOException e) {
+            throw new NuxeoException("Invalid json logEntry" + json, e);
         }
     }
 
-    protected int getOptionAsInteger(Map<String, String> options, String option, int defaultValue) {
-        String value = options.get(option);
-        return value == null ? defaultValue : Integer.valueOf(value);
+    @Override
+    protected void processBatch(ComputationContext context, List<LogEntry> entries) {
+        if (entries.isEmpty()) {
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Writing %d log entries to audit backend.", entries.size()));
+        }
+        AuditLogger logger = Framework.getService(AuditLogger.class);
+        logger.addLogEntries(entries);
+        context.askForCheckpoint();
     }
 
 }
