@@ -20,7 +20,7 @@
 package org.nuxeo.ecm.core.bulk.actions;
 
 import java.io.Serializable;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -32,17 +32,15 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.IdRef;
 import org.nuxeo.ecm.core.bulk.BulkCommand;
 import org.nuxeo.ecm.core.bulk.BulkCommandHelper;
-import org.nuxeo.lib.stream.computation.AbstractComputation;
 import org.nuxeo.lib.stream.computation.ComputationContext;
 import org.nuxeo.lib.stream.computation.Record;
-import org.nuxeo.lib.stream.computation.Topology;
-import org.nuxeo.runtime.stream.StreamProcessorTopology;
+import org.nuxeo.runtime.stream.BatchedProcessorTopology;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
 /**
  * @since 10.2
  */
-public class SetPropertiesAction implements StreamProcessorTopology {
+public class SetPropertiesAction extends BatchedProcessorTopology<String> {
 
     private static final Log log = LogFactory.getLog(SetPropertiesAction.class);
 
@@ -52,38 +50,43 @@ public class SetPropertiesAction implements StreamProcessorTopology {
 
     public static final String PROPERTIES_PARAMS = "properties";
 
-    @Override
-    public Topology getTopology(Map<String, String> options) {
+    protected byte[] commandAsBytes;
 
-        return Topology.builder()
-                       .addComputation( //
-                               () -> new SetPropertyComputation(COMPUTATION_NAME),
-                               Collections.singletonList("i1:" + STREAM_NAME))
-                       .build();
+    public SetPropertiesAction() {
+        super(COMPUTATION_NAME, STREAM_NAME);
     }
 
-    public static class SetPropertyComputation extends AbstractComputation {
+    @Override
+    protected List<String> getEntriesFromRecord(Record record) {
+        String docIds = record.getKey().split("/")[1];
+        return Arrays.asList(docIds.split("_"));
+    }
 
-        public SetPropertyComputation(String name) {
-            super(name, 1, 0);
+    @Override
+    protected boolean flushBatch(Record record) {
+        if (commandAsBytes == null) {
+            commandAsBytes = record.getData();
+        } else if (!Arrays.equals(commandAsBytes, record.getData())) {
+            commandAsBytes = record.getData();
+            return true;
         }
+        return false;
+    }
 
-        @Override
-        @SuppressWarnings("unchecked")
-        public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-            BulkCommand command = BulkCommandHelper.getBulkCommandJson(record.getData());
-            Map<String, Serializable> properties = command.getParam(PROPERTIES_PARAMS);
-            String docId = record.getKey().split("/")[1];
-
-            TransactionHelper.runInTransaction(() -> {
+    @Override
+    protected void processBatch(ComputationContext context, List<String> entries) {
+        TransactionHelper.runInTransaction(() -> {
+            for (String docId : entries) {
+                BulkCommand command = BulkCommandHelper.getBulkCommandJson(commandAsBytes);
+                Map<String, Serializable> properties = command.getParam(PROPERTIES_PARAMS);
                 try (CloseableCoreSession session = CoreInstance.openCoreSession(command.getRepository(),
                         command.getUsername())) {
                     DocumentModel doc = session.getDocument(new IdRef(docId));
                     properties.forEach(doc::setPropertyValue);
                     session.saveDocument(doc);
                 }
-            });
-            context.askForCheckpoint();
-        }
+            }
+        });
+        context.askForCheckpoint();
     }
 }

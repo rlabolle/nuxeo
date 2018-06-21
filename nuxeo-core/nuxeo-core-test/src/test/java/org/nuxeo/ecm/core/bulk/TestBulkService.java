@@ -27,8 +27,6 @@ import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
 import java.io.Serializable;
 import java.math.BigInteger;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -71,7 +69,6 @@ public class TestBulkService {
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
         String nxql = String.format("SELECT * from Document where ecm:parentId='%s'", model.getId());
 
-        // TODO change operation name
         BulkStatus status = service.runAction(new BulkCommand().withUsername(session.getPrincipal().getName())
                                                                .withRepository(session.getRepositoryName())
                                                                .withQuery(nxql)
@@ -81,10 +78,8 @@ public class TestBulkService {
 
         LogManager manager = Framework.getService(StreamService.class).getLogManager(BULK_LOG_MANAGER_NAME);
         try (LogTailer<Record> tailer = manager.createTailer("counter", "output")) {
-            for (int i = 1; i <= 10; i++) {
-                LogRecord<Record> logRecord = tailer.read(Duration.ofSeconds(1));
-                assertEquals(i, new BigInteger(logRecord.message().getData()).intValue());
-            }
+            LogRecord<Record> logRecord = tailer.read(Duration.ofSeconds(1));
+            assertEquals(10, new BigInteger(logRecord.message().getData()).intValue());
         }
 
         status = service.getStatus(status.getId());
