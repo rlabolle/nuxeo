@@ -18,7 +18,6 @@
  */
 package org.nuxeo.ecm.core.bulk;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.nuxeo.ecm.core.bulk.BulkComponent.BULK_KV_STORE_NAME;
 import static org.nuxeo.ecm.core.bulk.BulkServiceImpl.SCROLLED_DOCUMENT_COUNT;
 import static org.nuxeo.ecm.core.bulk.BulkServiceImpl.SET_STREAM_NAME;
@@ -27,10 +26,10 @@ import static org.nuxeo.ecm.core.bulk.BulkStatus.State.BUILDING;
 import static org.nuxeo.ecm.core.bulk.BulkStatus.State.COMPLETED;
 import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,8 +47,6 @@ import org.nuxeo.runtime.kv.KeyValueStore;
 import org.nuxeo.runtime.stream.StreamProcessorTopology;
 import org.nuxeo.runtime.transaction.TransactionHelper;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
  * Computation that consumes a {@link BulkCommand} and produce document ids. This scroller takes a query to execute on
  * DB (by scrolling) and then produce document id to the appropriate stream.
@@ -66,9 +63,13 @@ public class StreamBulkScroller implements StreamProcessorTopology {
 
     public static final String SCROLL_KEEP_ALIVE_SECONDS_OPT = "scrollKeepAlive";
 
+    public static final String RECORD_BATCH_SIZE_OPT = "recordBatchSize";
+
     public static final int DEFAULT_SCROLL_BATCH_SIZE = 100;
 
     public static final int DEFAULT_SCROLL_KEEPALIVE_SECONDS = 60;
+
+    public static final int DEFAULT_RECORD_BATCH_SIZE = 50;
 
     @Override
     public Topology getTopology(Map<String, String> options) {
@@ -76,6 +77,7 @@ public class StreamBulkScroller implements StreamProcessorTopology {
         int scrollBatchSize = getOptionAsInteger(options, SCROLL_BATCH_SIZE_OPT, DEFAULT_SCROLL_BATCH_SIZE);
         int scrollKeepAliveSeconds = getOptionAsInteger(options, SCROLL_KEEP_ALIVE_SECONDS_OPT,
                 DEFAULT_SCROLL_KEEPALIVE_SECONDS);
+        int recordBatchSize = getOptionAsInteger(options, RECORD_BATCH_SIZE_OPT, DEFAULT_RECORD_BATCH_SIZE);
         // retrieve bulk actions to deduce output streams
         BulkAdminService service = Framework.getService(BulkAdminService.class);
         List<String> actions = service.getActions();
@@ -89,7 +91,7 @@ public class StreamBulkScroller implements StreamProcessorTopology {
         return Topology.builder()
                        .addComputation( //
                                () -> new BulkDocumentScrollerComputation(COMPUTATION_NAME, actions.size(),
-                                       scrollBatchSize, scrollKeepAliveSeconds), //
+                                       scrollBatchSize, scrollKeepAliveSeconds, recordBatchSize), //
                                mapping)
                        .build();
     }
@@ -100,11 +102,17 @@ public class StreamBulkScroller implements StreamProcessorTopology {
 
         protected final int scrollKeepAliveSeconds;
 
+        protected final int recordBatchSize;
+
+        protected final List<String> documentIds;
+
         public BulkDocumentScrollerComputation(String name, int nbOutputStreams, int scrollBatchSize,
-                int scrollKeepAliveSeconds) {
+                int scrollKeepAliveSeconds, int recordBatchSize) {
             super(name, 1, nbOutputStreams);
             this.scrollBatchSize = scrollBatchSize;
             this.scrollKeepAliveSeconds = scrollKeepAliveSeconds;
+            this.recordBatchSize = recordBatchSize;
+            documentIds = new ArrayList<>(recordBatchSize);
         }
 
         @Override
@@ -129,24 +137,39 @@ public class StreamBulkScroller implements StreamProcessorTopology {
                     long documentCount = 0;
                     while (scroll.hasResults()) {
                         List<String> docIds = scroll.getResults();
-                        // send these ids as keys to the appropriate stream
-                        // key will be bulkActionId/docId
-                        // value/data is a BulkCommand serialized as JSON
-                        docIds.forEach(docId -> context.produceRecord(command.getAction(), bulkActionId + '/' + docId,
-                                record.getData()));
+                        documentIds.addAll(docIds);
+                        if (documentIds.size() >= recordBatchSize) {
+                            // send these ids as keys to the appropriate stream
+                            // key will be bulkActionId/docIds
+                            // value/data is a BulkCommand serialized as JSON
+                            produceRecord(context, command.getAction(), bulkActionId, record.getData());
+                        }
+
                         documentCount += docIds.size();
-                        context.askForCheckpoint();
                         // next batch
                         scroll = session.scroll(scroll.getScrollId());
                         TransactionHelper.commitOrRollbackTransaction();
                         TransactionHelper.startTransaction();
                     }
+
+                    while (!documentIds.isEmpty()) {
+                        produceRecord(context, command.getAction(), bulkActionId, record.getData());
+                    }
+
                     kvStore.put(bulkActionId + STATE, COMPLETED.toString());
                     kvStore.put(bulkActionId + SCROLLED_DOCUMENT_COUNT, documentCount);
                 }
             } catch (NuxeoException e) {
                 log.error("Discard invalid record: " + record, e);
             }
+        }
+
+        protected void produceRecord(ComputationContext context, String action, String bulkActionId, byte[] data) {
+            List<String> docIds = documentIds.size() > recordBatchSize ? documentIds.subList(0, recordBatchSize)
+                    : documentIds;
+            context.produceRecord(action, bulkActionId + "/" + String.join("_", docIds), data);
+            context.askForCheckpoint();
+            docIds.clear();
         }
     }
 
