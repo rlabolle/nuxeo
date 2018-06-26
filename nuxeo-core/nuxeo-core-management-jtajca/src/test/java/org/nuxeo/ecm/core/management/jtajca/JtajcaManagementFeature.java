@@ -35,20 +35,20 @@ import org.nuxeo.runtime.api.Framework;
 import org.nuxeo.runtime.jtajca.NuxeoContainer;
 import org.nuxeo.runtime.management.ManagementFeature;
 import org.nuxeo.runtime.management.ServerLocator;
-import org.nuxeo.runtime.test.runner.ContainerFeature;
 import org.nuxeo.runtime.test.runner.Deploy;
 import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.HotDeployer.ActionHandler;
 import org.nuxeo.runtime.test.runner.RuntimeFeature;
 import org.nuxeo.runtime.test.runner.SimpleFeature;
+import org.nuxeo.runtime.test.runner.TransactionalFeature;
 
 import com.google.inject.Binder;
 import com.google.inject.Provider;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 
-@Features({ ManagementFeature.class, ContainerFeature.class })
+@Features({ ManagementFeature.class, TransactionalFeature.class })
 @Deploy("org.nuxeo.ecm.core.management.jtajca")
 @Deploy("org.nuxeo.ecm.core.management.jtajca:login-config.xml")
 public class JtajcaManagementFeature extends SimpleFeature {

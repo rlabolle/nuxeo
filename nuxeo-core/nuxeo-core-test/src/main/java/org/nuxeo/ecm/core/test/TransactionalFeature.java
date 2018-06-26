@@ -19,132 +19,42 @@
  */
 package org.nuxeo.ecm.core.test;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.commons.logging.LogFactory;
-import org.apache.log4j.Logger;
-import org.junit.Assert;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
 import org.nuxeo.ecm.core.test.annotations.TransactionalConfig;
-import org.nuxeo.runtime.management.jvm.ThreadDeadlocksDetector;
-import org.nuxeo.runtime.test.runner.ContainerFeature;
-import org.nuxeo.runtime.test.runner.Features;
 import org.nuxeo.runtime.test.runner.FeaturesRunner;
 import org.nuxeo.runtime.test.runner.HotDeployer.ActionHandler;
-import org.nuxeo.runtime.test.runner.RuntimeFeature;
-import org.nuxeo.runtime.test.runner.SimpleFeature;
-import org.nuxeo.runtime.transaction.TransactionHelper;
 
+/**
+ * @deprecated since 10.2, use {@link org.nuxeo.runtime.test.runner.TransactionalFeature} instead
+ */
+@Deprecated
 @RepositoryConfig(cleanup = Granularity.METHOD)
-@Features(ContainerFeature.class)
-public class TransactionalFeature extends SimpleFeature {
+public class TransactionalFeature extends org.nuxeo.runtime.test.runner.TransactionalFeature {
 
-    protected TransactionalConfig config;
-
-    protected boolean txStarted;
-
-    protected final List<Waiter> waiters = new LinkedList<>();
-
+    /**
+     * @deprecated since 10.2, use {@link org.nuxeo.runtime.test.runner.TransactionalFeature.Waiter} instead
+     */
+    @Deprecated
     @FunctionalInterface
-    public interface Waiter {
-
-        boolean await(long deadline) throws InterruptedException;
+    public interface Waiter extends org.nuxeo.runtime.test.runner.TransactionalFeature.Waiter {
 
     }
 
+    /**
+     * @deprecated since 10.2, use
+     *             {@link org.nuxeo.runtime.test.runner.TransactionalFeature#addWaiter(org.nuxeo.runtime.test.runner.TransactionalFeature.Waiter)}
+     *             instead
+     */
+    @Deprecated
     public void addWaiter(Waiter waiter) {
-        waiters.add(waiter);
-    }
-
-    public void nextTransaction() {
-        nextTransaction(10, TimeUnit.MINUTES);
-    }
-
-    public void nextTransaction(long duration, TimeUnit unit) {
-        long deadline = System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(duration, unit);
-        boolean tx = TransactionHelper.isTransactionActive();
-        boolean rb = TransactionHelper.isTransactionMarkedRollback();
-        if (tx || rb) {
-            // there may be tx synchronizer pending, so we
-            // have to commit the transaction
-            TransactionHelper.commitOrRollbackTransaction();
-        }
-        try {
-            for (Waiter provider : waiters) {
-                try {
-                    Assert.assertTrue(await(provider, deadline));
-                } catch (InterruptedException cause) {
-                    Thread.currentThread().interrupt();
-                    throw new AssertionError("interrupted while awaiting for asynch completion", cause);
-                }
-            }
-        } finally {
-            if (tx || rb) {
-                // restore previous tx status
-                TransactionHelper.startTransaction();
-                if (rb) {
-                    TransactionHelper.setTransactionRollbackOnly();
-                }
-            }
-        }
-    }
-
-    boolean await(Waiter waiter, long deadline) throws InterruptedException {
-        if (waiter.await(deadline)) {
-            return true;
-        }
-        try {
-            File file = new ThreadDeadlocksDetector().dump(new long[0]);
-            LogFactory.getLog(TransactionalFeature.class)
-                      .warn("timed out in " + waiter.getClass() + ", thread dump available in " + file);
-        } catch (IOException cause) {
-            LogFactory.getLog(TransactionalFeature.class)
-                      .warn("timed out in " + waiter.getClass() + ", cannot take thread dump", cause);
-        }
-        return false;
+        super.addWaiter(waiter);
     }
 
     @Override
-    public void initialize(FeaturesRunner runner) throws Exception {
-        config = runner.getConfig(TransactionalConfig.class);
-        runner.getFeature(RuntimeFeature.class).registerHandler(new TransactionalDeployer());
-    }
-
-    @Override
-    public void beforeSetup(FeaturesRunner runner) throws Exception {
-        startTransactionBefore();
-    }
-
-    @Override
-    public void afterTeardown(FeaturesRunner runner) throws Exception {
-        commitOrRollbackTransactionAfter();
-    }
-
-    protected void startTransactionBefore() {
-        if (config.autoStart()) {
-            txStarted = TransactionHelper.startTransaction();
-        }
-    }
-
-    protected void commitOrRollbackTransactionAfter() {
-        if (txStarted) {
-            TransactionHelper.commitOrRollbackTransaction();
-        } else {
-            if (TransactionHelper.isTransactionActive()) {
-                try {
-                    TransactionHelper.setTransactionRollbackOnly();
-                    TransactionHelper.commitOrRollbackTransaction();
-                } finally {
-                    Logger.getLogger(TransactionalFeature.class)
-                          .warn("Committing a transaction for your, please do it yourself");
-                }
-            }
-        }
+    public void initialize(FeaturesRunner runner) {
+        super.initialize(runner);
+        autoStartTransaction = runner.getConfig(TransactionalConfig.class).autoStart();
     }
 
     /**
@@ -153,7 +63,10 @@ public class TransactionalFeature extends SimpleFeature {
      * transaction manager will be installed.
      *
      * @since 9.3
+     * @deprecated since 10.2, use {@link org.nuxeo.runtime.test.runner.TransactionalFeature} and
+     *             {@link org.nuxeo.runtime.test.runner.TransactionalFeature.TransactionalDeployer}
      */
+    @Deprecated
     public class TransactionalDeployer extends ActionHandler {
 
         @Override
