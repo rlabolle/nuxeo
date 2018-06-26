@@ -18,6 +18,12 @@
  */
 package org.nuxeo.ecm.automation.core.operations.services.bulk;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.nuxeo.ecm.core.bulk.BulkStatus.State.BUILDING;
+import static org.nuxeo.ecm.core.bulk.BulkStatus.State.SCHEDULED;
+import static org.osgi.util.measurement.Unit.s;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -76,7 +82,12 @@ public class TestRunBulkOperation {
 
         BulkStatus result = (BulkStatus) service.run(ctx, RunBulkOperation.ID, params);
 
-        Assert.assertNotNull(result);
+        assertNotNull(result);
+
+        BulkStatus status = (BulkStatus) service.run(ctx, GetBulkStatus.ID,
+                Collections.singletonMap("id", result.getUUID().toString()));
+
+        assertEquals(SCHEDULED, status.getState());
 
     }
 
