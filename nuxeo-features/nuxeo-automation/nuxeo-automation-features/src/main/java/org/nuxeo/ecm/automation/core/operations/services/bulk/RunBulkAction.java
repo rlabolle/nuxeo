@@ -63,9 +63,9 @@ public class RunBulkAction {
                                                .withUsername(userName)
                                                .withQuery(query)
                                                .withParams(parameters);
-        String bulkId = service.submit(command);
+        String commandId = service.submit(command);
         BulkStatus bulkStatus = new BulkStatus();
-        bulkStatus.setId(bulkId);
+        bulkStatus.setId(commandId);
         return bulkStatus;
     }
 

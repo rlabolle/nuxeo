@@ -131,9 +131,9 @@ public class StreamBulkScroller implements StreamProcessorTopology {
         protected void processRecord(ComputationContext context, Record record) {
             KeyValueStore kvStore = Framework.getService(KeyValueService.class).getKeyValueStore(BULK_KV_STORE_NAME);
             try {
-                String bulkId = record.getKey();
+                String commandId = record.getKey();
                 BulkCommand command = BulkCommands.fromBytes(record.getData());
-                if (!kvStore.compareAndSet(bulkId + STATE, SCHEDULED.toString(), SCROLLING_RUNNING.toString())) {
+                if (!kvStore.compareAndSet(commandId + STATE, SCHEDULED.toString(), SCROLLING_RUNNING.toString())) {
                     log.error("Discard record: " + record + " because it's already building");
                     context.askForCheckpoint();
                     return;
@@ -150,10 +150,10 @@ public class StreamBulkScroller implements StreamProcessorTopology {
                         documentIds.addAll(docIds);
                         while (documentIds.size() >= bucketSize) {
                             // we use number of sent document to make record key unique
-                            // key are prefixed with bulkId:, suffix are:
+                            // key are prefixed with commandId:, suffix are:
                             // bucketSize / 2 * bucketSize / ... / total document count
                             bucketNumber++;
-                            produceBucket(context, command.getAction(), bulkId, bucketNumber * bucketSize);
+                            produceBucket(context, command.getAction(), commandId, bucketNumber * bucketSize);
                         }
 
                         documentCount += docIds.size();
@@ -166,11 +166,11 @@ public class StreamBulkScroller implements StreamProcessorTopology {
                     // send remaining document ids
                     // there's at most one record because we loop while scrolling
                     if (!documentIds.isEmpty()) {
-                        produceBucket(context, command.getAction(), bulkId, documentCount);
+                        produceBucket(context, command.getAction(), commandId, documentCount);
                     }
 
-                    kvStore.put(bulkId + STATE, RUNNING.toString());
-                    kvStore.put(bulkId + SCROLLED_DOCUMENT_COUNT, documentCount);
+                    kvStore.put(commandId + STATE, RUNNING.toString());
+                    kvStore.put(commandId + SCROLLED_DOCUMENT_COUNT, documentCount);
                 }
             } catch (NuxeoException e) {
                 log.error("Discard invalid record: " + record, e);
@@ -180,10 +180,10 @@ public class StreamBulkScroller implements StreamProcessorTopology {
         /**
          * Produces a bucket as a record to appropriate bulk action stream.
          */
-        protected void produceBucket(ComputationContext context, String action, String bulkActionId, long nbDocSent) {
+        protected void produceBucket(ComputationContext context, String action, String commandId, long nbDocSent) {
             List<String> docIds = documentIds.subList(0, min(bucketSize, documentIds.size()));
             // send these ids as keys to the appropriate stream
-            context.produceRecord(action, BulkRecords.of(bulkActionId, nbDocSent, docIds));
+            context.produceRecord(action, BulkRecords.of(commandId, nbDocSent, docIds));
             context.askForCheckpoint();
             docIds.clear();
         }

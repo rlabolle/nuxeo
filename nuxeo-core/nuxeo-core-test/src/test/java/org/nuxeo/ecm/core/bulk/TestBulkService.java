@@ -64,11 +64,11 @@ public class TestBulkService {
         DocumentModel model = session.getDocument(new PathRef("/default-domain/workspaces/test"));
         String nxql = String.format("SELECT * from Document where ecm:parentId='%s'", model.getId());
 
-        String bulkId = service.submit(new BulkCommand().withUsername(session.getPrincipal().getName())
-                                                        .withRepository(session.getRepositoryName())
-                                                        .withQuery(nxql)
-                                                        .withAction("count"));
-        assertNotNull(bulkId);
+        String commandId = service.submit(new BulkCommand().withUsername(session.getPrincipal().getName())
+                                                           .withRepository(session.getRepositoryName())
+                                                           .withQuery(nxql)
+                                                           .withAction("count"));
+        assertNotNull(commandId);
 
         LogManager manager = Framework.getService(StreamService.class).getLogManager(BULK_LOG_MANAGER_NAME);
         try (LogTailer<Record> tailer = manager.createTailer("counter", "output")) {
@@ -76,7 +76,7 @@ public class TestBulkService {
             assertEquals(10, new BigInteger(logRecord.message().getData()).intValue());
         }
 
-        BulkStatus status = service.getStatus(bulkId);
+        BulkStatus status = service.getStatus(commandId);
         assertNotNull(status);
         // TODO change RUNNING state when we'll be able to detect end
         assertEquals(RUNNING, status.getState());
@@ -93,12 +93,12 @@ public class TestBulkService {
         String title = "test title";
         String description = "test description";
 
-        String bulkId = service.submit(new BulkCommand().withRepository(session.getRepositoryName())
-                                                        .withUsername(session.getPrincipal().getName())
-                                                        .withQuery(nxql)
-                                                        .withAction("setProperties")
-                                                        .withParam("dc:title", title)
-                                                        .withParam("dc:description", description));
+        String commandId = service.submit(new BulkCommand().withRepository(session.getRepositoryName())
+                                                           .withUsername(session.getPrincipal().getName())
+                                                           .withQuery(nxql)
+                                                           .withAction("setProperties")
+                                                           .withParam("dc:title", title)
+                                                           .withParam("dc:description", description));
 
         LogManager manager = Framework.getService(StreamService.class).getLogManager("bulk");
         try (LogTailer<Record> tailer = manager.createTailer("setProperties", "setProperties")) {
@@ -107,7 +107,7 @@ public class TestBulkService {
             }
         }
 
-        BulkStatus status = service.getStatus(bulkId);
+        BulkStatus status = service.getStatus(commandId);
         assertNotNull(status);
         // TODO change RUNNING state when we'll be able to detect end
         assertEquals(RUNNING, status.getState());

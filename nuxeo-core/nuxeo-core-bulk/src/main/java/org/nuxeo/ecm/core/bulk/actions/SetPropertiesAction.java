@@ -19,7 +19,7 @@
 
 package org.nuxeo.ecm.core.bulk.actions;
 
-import static org.nuxeo.ecm.core.bulk.BulkRecords.bulkIdFrom;
+import static org.nuxeo.ecm.core.bulk.BulkRecords.commandIdFrom;
 import static org.nuxeo.ecm.core.bulk.BulkRecords.docIdsFrom;
 
 import java.util.ArrayList;
@@ -80,7 +80,7 @@ public class SetPropertiesAction implements StreamProcessorTopology {
 
         protected final List<String> documentIds;
 
-        protected String currentBulkId;
+        protected String currentCommandId;
 
         protected BulkCommand currentCommand;
 
@@ -106,15 +106,15 @@ public class SetPropertiesAction implements StreamProcessorTopology {
 
         @Override
         public void processRecord(ComputationContext context, String inputStreamName, Record record) {
-            String bulkId = bulkIdFrom(record);
-            if (currentBulkId == null) {
+            String commandId = commandIdFrom(record);
+            if (currentCommandId == null) {
                 // first time we need to process something
-                loadCurrentBulkContext(bulkId);
-            } else if (!currentBulkId.equals(bulkId)) {
+                loadCurrentBulkCommandContext(commandId);
+            } else if (!currentCommandId.equals(commandId)) {
                 // new bulk id computation - send remaining elements
                 processBatch(context);
                 documentIds.clear();
-                loadCurrentBulkContext(bulkId);
+                loadCurrentBulkCommandContext(commandId);
             }
             // process record
             documentIds.addAll(docIdsFrom(record));
@@ -123,9 +123,9 @@ public class SetPropertiesAction implements StreamProcessorTopology {
             }
         }
 
-        protected void loadCurrentBulkContext(String bulkId) {
-            currentBulkId = bulkId;
-            currentCommand = BulkCommands.fromKVStore(bulkId);
+        protected void loadCurrentBulkCommandContext(String commandId) {
+            currentCommandId = commandId;
+            currentCommand = BulkCommands.fromKVStore(commandId);
         }
 
         @Override
