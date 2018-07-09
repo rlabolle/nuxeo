@@ -68,7 +68,7 @@ public class DefaultAuditBulker implements AuditBulkerMBean, AuditBulker {
 
     Thread thread;
 
-    DefaultAuditBulker(AuditBackend backend, AuditBulkerDescriptor config) {
+    public DefaultAuditBulker(AuditBackend backend, AuditBulkerDescriptor config) {
         this.backend = backend;
         timeout = config.timeout;
         bulksize = config.size;
@@ -78,9 +78,11 @@ public class DefaultAuditBulker implements AuditBulkerMBean, AuditBulker {
     public void onApplicationStarted() {
         thread = new Thread(new Consumer(), "Nuxeo-Audit-Bulker");
         thread.start();
-        ResourcePublisher publisher = Framework.getService(ResourcePublisher.class);
-        if (publisher != null) {
-            publisher.registerResource("audit-bulker", "audit-bulker", AuditBulkerMBean.class, this);
+        if (Framework.isInitialized()) {
+            ResourcePublisher publisher = Framework.getService(ResourcePublisher.class);
+            if (publisher != null) {
+                publisher.registerResource("audit-bulker", "audit-bulker", AuditBulkerMBean.class, this);
+            }
         }
         registry.register(MetricRegistry.name("nuxeo", "audit", "size"), sizeGauge);
     }
@@ -114,8 +116,8 @@ public class DefaultAuditBulker implements AuditBulkerMBean, AuditBulker {
 
     @Override
     public void offer(LogEntry entry) {
-        if (log.isDebugEnabled()) {
-            log.debug("offered " + entry);
+        if (log.isTraceEnabled()) {
+            log.trace("offered " + entry);
         }
         queue.add(entry);
         queuedCount.inc();
