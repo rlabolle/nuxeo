@@ -5422,6 +5422,13 @@
       </controls>
     </widget>
 
+    <widget name="select_path_tree_fancybox" type="action">
+      <properties widgetMode="any">
+        <property name="action">#{webActions.getAction("selectPathTreeFancybox", false)}</property>
+        <property name="actionsDisplay">buttons</property>
+      </properties>
+    </widget>
+
   </extension>
 
   <extension target="org.nuxeo.ecm.platform.actions.ActionService"
@@ -5431,6 +5438,20 @@
       <category>USER_PANEL_LEFT</category>
       <properties>
         <property name="widgetName">userLayout</property>
+      </properties>
+    </action>
+
+    <action id="selectPathTreeFancybox" type="fancybox" label="command.add">
+      <properties>
+        <property name="include">/widgets/actions/select_path_tree_fancybox_content.xhtml</property>
+        <property name="width">50%</property>
+        <property name="height">75%</property>
+        <property name="autoScale">true</property>
+        <property name="autoDimensions">false</property>
+        <property name="enableEscapeButton">true</property>
+        <property name="centerOnScroll">true</property>
+        <property name="scrolling">false</property>
+        <property name="styleClass">smallButton</property>
       </properties>
     </action>
 

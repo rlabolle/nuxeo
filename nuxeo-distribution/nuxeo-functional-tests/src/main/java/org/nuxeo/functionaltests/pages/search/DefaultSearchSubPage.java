@@ -45,7 +45,7 @@ public class DefaultSearchSubPage extends AbstractSearchSubPage {
 
     private static final String S2_COLLECTION_XPATH = "//*[@id='s2id_nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_visible_collection_select2']";
 
-    public static final String TREE_PATH_ID = "nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_ecm_path_treeId";
+    public static final String TREE_PATH_ID = "nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_select_path_tree_fancybox_selectPathTreeFancybox_after_view_fancy_subview:nxw_ecm_path_treeId";
 
     @FindBy(id = "nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_ecm_fulltext")
     protected WebElement fulltext;
@@ -68,7 +68,7 @@ public class DefaultSearchSubPage extends AbstractSearchSubPage {
     @FindBy(id = "nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_dc_subjects_agg")
     protected WebElement subjectsAggregate;
 
-    @FindBy(id = "nxw_ecm_path_openPopup")
+    @FindBy(id = "nxl_gridSearchLayout:nxw_searchLayout_form:nxl_default_search_layout:nxw_select_path_tree_fancybox_selectPathTreeFancybox_link")
     @Required
     protected WebElement openPathPopupButton;
 
