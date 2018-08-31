@@ -207,12 +207,12 @@ public class ComputationRunner implements Runnable, RebalanceListener {
             long now = System.currentTimeMillis();
             // for a source we take lastTimerExecution starvation
             if (metadata.inputStreams().isEmpty()) {
-                if (lastTimerExecution > 0 && (now - lastTimerExecution) > STARVING_TIMEOUT_MS) {
+                if (lastTimerExecution > 0 && now - lastTimerExecution > STARVING_TIMEOUT_MS) {
                     log.info(metadata.name() + ": End of source drain, last timer " + STARVING_TIMEOUT_MS + " ms ago");
                     return false;
                 }
             } else {
-                if ((now - lastReadTime) > STARVING_TIMEOUT_MS) {
+                if (now - lastReadTime > STARVING_TIMEOUT_MS) {
                     log.info(metadata.name() + ": End of drain no more input after " + (now - lastReadTime) + " ms, "
                             + inRecords + " records read, " + counter + " reads attempt");
                     return false;
