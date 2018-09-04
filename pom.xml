@@ -6793,6 +6793,7 @@
                  <kafka>true</kafka> <!-- deprecated since 10.3 -->
                  <nuxeo.test.stream.type>kafka</nuxeo.test.stream.type>
                  <kafka.bootstrap.servers>${kafka.bootstrap.servers}</kafka.bootstrap.servers> <!-- deprecated since 10.3 -->
+                 <nuxeo.test.kafka.servers>${kafka.bootstrap.servers}</nuxeo.test.kafka.servers>
                </systemPropertyVariables>
              </configuration>
            </plugin>
