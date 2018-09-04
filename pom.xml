@@ -406,6 +406,13 @@
         <version>${nuxeo.runtime.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.nuxeo.runtime</groupId>
+        <artifactId>nuxeo-runtime-stream</artifactId>
+        <version>${nuxeo.runtime.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.nuxeo.lib.stream</groupId>
         <artifactId>nuxeo-stream</artifactId>
         <version>${nuxeo.runtime.version}</version>
@@ -6783,8 +6790,9 @@
              <artifactId>maven-surefire-plugin</artifactId>
              <configuration>
                <systemPropertyVariables>
-                 <kafka>true</kafka>
-                 <kafka.bootstrap.servers>${kafka.bootstrap.servers}</kafka.bootstrap.servers>
+                 <kafka>true</kafka> <!-- deprecated since 10.3 -->
+                 <nuxeo.test.stream.type>kafka</nuxeo.test.stream.type>
+                 <kafka.bootstrap.servers>${kafka.bootstrap.servers}</kafka.bootstrap.servers> <!-- deprecated since 10.3 -->
                </systemPropertyVariables>
              </configuration>
            </plugin>
