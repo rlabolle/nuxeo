@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<component name="org.nuxeo.runtime.aws">
+
+    <documentation>
+        Manages Edge Cache Servers.
+    </documentation>
+
+    <implementation class="org.nuxeo.runtime.aws.NuxeoAWSCredentialsProviderImpl" />
+
+    <extension-point name="credentials">
+        <documentation>Used to configure the AWS access if needed</documentation>
+        <object class="org.nuxeo.runtime.aws.AWSCredentialsDescriptor" />
+    </extension-point>
+
+    <service>
+        <provide interface="org.nuxeo.runtime.aws.NuxeoAWSCredentialsProvider" />
+    </service>
+
+</component>
