@@ -80,7 +80,7 @@ public class DefaultFulltextParser implements FulltextParser {
     @Override
     public void parse(String s, String path, String mimeType, DocumentLocation documentLocation, List<String> strings) {
         s = preprocessField(s, path, mimeType);
-        for (String word : WORD_SPLIT_PATTERN.split(s)) {
+        for (String word : WORD_SPLIT_PATTERN.split(s)) { // XXX do it in streaming,
             if (!word.isEmpty()) {
                 strings.add(word.toLowerCase());
             }
