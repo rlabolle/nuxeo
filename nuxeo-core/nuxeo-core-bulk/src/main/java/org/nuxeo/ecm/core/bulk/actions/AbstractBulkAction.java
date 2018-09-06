@@ -151,6 +151,14 @@ public abstract class AbstractBulkAction implements StreamProcessorTopology {
             getLog().debug(String.format("Destroy: %s, pending entries: %d", metadata.name(), documentIds.size()));
         }
 
+        /**
+         * Define if the computation produces count records.<br>
+         * Intermediate computations don't want to do it.
+         */
+        protected boolean doesCount() {
+            return true;
+        }
+
         protected Log getLog() {
             return LogFactory.getLog(getClass());
         }
@@ -176,8 +184,10 @@ public abstract class AbstractBulkAction implements StreamProcessorTopology {
                         throw new NuxeoException(e);
                     }
                 });
-                BulkCounter counter = new BulkCounter(currentCommandId, documentIds.size());
-                context.produceRecord("o1", currentCommandId, BulkCodecs.getBulkCounterCodec().encode(counter));
+                if (doesCount()) {
+                    BulkCounter counter = new BulkCounter(currentCommandId, documentIds.size());
+                    context.produceRecord("o1", currentCommandId, BulkCodecs.getBulkCounterCodec().encode(counter));
+                }
                 documentIds.clear();
                 context.askForCheckpoint();
             }
